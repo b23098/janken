@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Janken GAME!</title>
+</head>
+
+<body>
+  <a href="/logout">ログアウト</a>
+
+  <h1>Janken GAME!</h1>
+
+  <h2>エントリー</h2>
+  <ul>
+    <li th:each="u : ${entries}" th:text="${u}"></li>
+  </ul>
+
+  <p>Hi <span th:text="${currentUser}"></span></p>
+
+  <a th:href="@{/janken/result(hand='グー')}">ぐー</a>
+  <a th:href="@{/janken/result(hand='チョキ')}">ちょき</a>
+  <a th:href="@{/janken/result(hand='パー')}">ぱー</a>
+
+  <div th:if="${result}">
+    <h3>結果</h3>
+    <p>あなたの手：<span th:text="${userHand}"></span></p>
+    <p>あいての手：<span th:text="${cpuHand}"></span></p>
+    <p><b th:text="${result}"></b></p>
+  </div>
+</body>
+
+</html>
