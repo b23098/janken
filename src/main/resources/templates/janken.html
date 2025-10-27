@@ -11,13 +11,32 @@
 
   <h1>Janken GAME!</h1>
 
-  <h2>エントリー</h2>
-  <ul>
-    <li th:each="u : ${entries}" th:text="${u}"></li>
-  </ul>
-
   <p>Hi <span th:text="${currentUser}"></span></p>
 
+  <h2>エントリー</h2>
+  <ul>
+    <li th:each="u : ${users}" th:text="${u.name}"></li>
+  </ul>
+
+  <h2>試合結果</h2>
+  <table border="1">
+    <tr>
+      <th>ID</th>
+      <th>User1</th>
+      <th>User2</th>
+      <th>User1の手</th>
+      <th>User2の手</th>
+    </tr>
+    <tr th:each="m : ${matches}">
+      <td th:text="${m.id}"></td>
+      <td th:text="${m.user1}"></td>
+      <td th:text="${m.user2}"></td>
+      <td th:text="${m.user1Hand}"></td>
+      <td th:text="${m.user2Hand}"></td>
+    </tr>
+  </table>
+
+  <h3>CPUと対戦！</h3>
   <a th:href="@{/janken/result(hand='グー')}">ぐー</a>
   <a th:href="@{/janken/result(hand='チョキ')}">ちょき</a>
   <a th:href="@{/janken/result(hand='パー')}">ぱー</a>

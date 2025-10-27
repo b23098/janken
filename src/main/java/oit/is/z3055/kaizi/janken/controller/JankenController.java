@@ -1,41 +1,49 @@
 package oit.is.z3055.kaizi.janken.controller;
 
+import java.util.ArrayList;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import oit.is.z3055.kaizi.janken.model.Entry;
+import oit.is.z3055.kaizi.janken.model.User;
+import oit.is.z3055.kaizi.janken.model.UserMapper;
+import oit.is.z3055.kaizi.janken.model.Match;
+import oit.is.z3055.kaizi.janken.model.MatchMapper;
 
 @Controller
 public class JankenController {
 
-  private final Entry entry;
+  @Autowired
+  UserMapper userMapper;
 
-  public JankenController(Entry entry) {
-    this.entry = entry;
-  }
+  @Autowired
+  MatchMapper matchMapper;
 
-  // 初期画面
   @GetMapping("/janken")
   public String janken(Model model, Authentication auth) {
     String currentUser = (auth != null) ? auth.getName() : "anonymous";
+
+    ArrayList<User> users = userMapper.selectAllUsers();
+    ArrayList<Match> matches = matchMapper.selectAllMatches();
+
     model.addAttribute("currentUser", currentUser);
-    model.addAttribute("entries", entry.list());
+    model.addAttribute("users", users);
+    model.addAttribute("matches", matches);
+
     return "janken";
   }
 
-  // 結果処理
   @GetMapping("/janken/result")
   public String jankenResult(@RequestParam String hand, Model model, Authentication auth) {
     String currentUser = (auth != null) ? auth.getName() : "anonymous";
 
-    // 相手（CPU）の手
     String[] hands = { "グー", "チョキ", "パー" };
     String cpuHand = hands[(int) (Math.random() * 3)];
 
-    // 勝敗判定
     String result;
     if (hand.equals(cpuHand)) {
       result = "あいこです！";
@@ -47,9 +55,12 @@ public class JankenController {
       result = "あなたの負け...";
     }
 
-    // モデルに値を渡す
+    ArrayList<User> users = userMapper.selectAllUsers();
+    ArrayList<Match> matches = matchMapper.selectAllMatches();
+
     model.addAttribute("currentUser", currentUser);
-    model.addAttribute("entries", entry.list());
+    model.addAttribute("users", users);
+    model.addAttribute("matches", matches);
     model.addAttribute("userHand", hand);
     model.addAttribute("cpuHand", cpuHand);
     model.addAttribute("result", result);
