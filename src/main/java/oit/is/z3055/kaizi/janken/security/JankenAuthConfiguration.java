@@ -47,7 +47,7 @@ public class JankenAuthConfiguration {
         .password(encoder.encode("isdev"))
         .roles("USER")
         .build();
-    UserDetails honda = User.withUsername("ホンダ")
+    UserDetails honda = User.withUsername("ほんだ")
         .password(encoder.encode("isdev"))
         .roles("USER")
         .build();

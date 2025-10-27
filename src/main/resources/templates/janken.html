@@ -10,12 +10,13 @@
   <a href="/logout">ログアウト</a>
 
   <h1>Janken GAME!</h1>
-
   <p>Hi <span th:text="${currentUser}"></span></p>
 
   <h2>エントリー</h2>
   <ul>
-    <li th:each="u : ${users}" th:text="${u.name}"></li>
+    <li th:each="user : ${users}">
+      <a th:href="@{/match(id=${user.id})}" th:text="${user.name}"></a>
+    </li>
   </ul>
 
   <h2>試合結果</h2>
@@ -35,18 +36,6 @@
       <td th:text="${m.user2Hand}"></td>
     </tr>
   </table>
-
-  <h3>CPUと対戦！</h3>
-  <a th:href="@{/janken/result(hand='グー')}">ぐー</a>
-  <a th:href="@{/janken/result(hand='チョキ')}">ちょき</a>
-  <a th:href="@{/janken/result(hand='パー')}">ぱー</a>
-
-  <div th:if="${result}">
-    <h3>結果</h3>
-    <p>あなたの手：<span th:text="${userHand}"></span></p>
-    <p>あいての手：<span th:text="${cpuHand}"></span></p>
-    <p><b th:text="${result}"></b></p>
-  </div>
 </body>
 
 </html>
