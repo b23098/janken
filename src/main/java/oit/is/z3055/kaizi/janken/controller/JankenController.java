@@ -18,32 +18,48 @@ import oit.is.z3055.kaizi.janken.model.MatchMapper;
 public class JankenController {
 
   @Autowired
-  UserMapper userMapper;
+  private UserMapper userMapper;
 
   @Autowired
-  MatchMapper matchMapper;
+  private MatchMapper matchMapper;
 
+  // /janken : ユーザ一覧と試合結果一覧を表示
   @GetMapping("/janken")
-  public String janken(Model model, Authentication auth) {
+  public String janken(Authentication auth, Model model) {
     String currentUser = (auth != null) ? auth.getName() : "anonymous";
-
     ArrayList<User> users = userMapper.selectAllUsers();
     ArrayList<Match> matches = matchMapper.selectAllMatches();
-
     model.addAttribute("currentUser", currentUser);
     model.addAttribute("users", users);
     model.addAttribute("matches", matches);
-
     return "janken";
   }
 
-  @GetMapping("/janken/result")
-  public String jankenResult(@RequestParam String hand, Model model, Authentication auth) {
-    String currentUser = (auth != null) ? auth.getName() : "anonymous";
+  // /match?id=◯ と /janken/match?id=◯ の両方で受ける
+  @GetMapping({ "/match", "/janken/match" })
+  public String showMatch(@RequestParam int id, Authentication auth, Model model) {
+    if (auth == null)
+      return "redirect:/login";
+    User loginUser = userMapper.selectByName(auth.getName());
+    User opponent = userMapper.selectById(id);
+    if (loginUser == null || opponent == null)
+      return "redirect:/janken";
+    model.addAttribute("loginUser", loginUser);
+    model.addAttribute("opponent", opponent);
+    return "match";
+  }
 
-    String[] hands = { "グー", "チョキ", "パー" };
-    String cpuHand = hands[(int) (Math.random() * 3)];
+  // /fight?hand=◯&id=◯ と /janken/fight?... の両方で受ける
+  @GetMapping({ "/fight", "/janken/fight" })
+  public String fight(@RequestParam String hand, @RequestParam int id, Authentication auth, Model model) {
+    if (auth == null)
+      return "redirect:/login";
+    User loginUser = userMapper.selectByName(auth.getName());
+    User opponent = userMapper.selectById(id);
+    if (loginUser == null || opponent == null)
+      return "redirect:/janken";
 
+    String cpuHand = "チョキ"; // 固定
     String result;
     if (hand.equals(cpuHand)) {
       result = "あいこです！";
@@ -55,16 +71,18 @@ public class JankenController {
       result = "あなたの負け...";
     }
 
-    ArrayList<User> users = userMapper.selectAllUsers();
-    ArrayList<Match> matches = matchMapper.selectAllMatches();
+    Match m = new Match();
+    m.setUser1(loginUser.getId());
+    m.setUser2(opponent.getId());
+    m.setUser1Hand(hand);
+    m.setUser2Hand(cpuHand);
+    matchMapper.insertMatch(m);
 
-    model.addAttribute("currentUser", currentUser);
-    model.addAttribute("users", users);
-    model.addAttribute("matches", matches);
+    model.addAttribute("loginUser", loginUser);
+    model.addAttribute("opponent", opponent);
     model.addAttribute("userHand", hand);
     model.addAttribute("cpuHand", cpuHand);
     model.addAttribute("result", result);
-
-    return "janken";
+    return "match";
   }
 }
