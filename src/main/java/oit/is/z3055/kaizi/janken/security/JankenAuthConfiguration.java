@@ -39,7 +39,6 @@ public class JankenAuthConfiguration {
 
   @Bean
   public UserDetailsService users(PasswordEncoder encoder) {
-    // パスワードは isdev を bcrypt でハッシュ化して利用
     UserDetails user1 = User.withUsername("user1")
         .password(encoder.encode("isdev"))
         .roles("USER")
@@ -48,7 +47,11 @@ public class JankenAuthConfiguration {
         .password(encoder.encode("isdev"))
         .roles("USER")
         .build();
-    return new InMemoryUserDetailsManager(user1, user2);
+    UserDetails honda = User.withUsername("ホンダ")
+        .password(encoder.encode("isdev"))
+        .roles("USER")
+        .build();
+    return new InMemoryUserDetailsManager(user1, user2, honda);
   }
 
   @Bean
@@ -56,13 +59,18 @@ public class JankenAuthConfiguration {
       throws Exception {
     http
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/janken/**").authenticated() // /janken配下は認証必須
+            .requestMatchers("/h2-console/**").permitAll() // ★ H2 Consoleにアクセス許可
+            .requestMatchers("/janken/**").authenticated()
             .anyRequest().permitAll())
-        .formLogin(Customizer.withDefaults()) // Spring Security のデフォルトフォーム
+        .formLogin(Customizer.withDefaults())
         .logout(logout -> logout
             .logoutUrl("/logout")
-            .logoutSuccessHandler(logoutSuccessHandler) // ログアウト後トップへ
-        );
+            .logoutSuccessHandler(logoutSuccessHandler));
+
+    // ★ H2 Console 用の設定（必須）
+    http.csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**")); // CSRF無効化
+    http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin())); // フレーム制限解除
+
     return http.build();
   }
 
@@ -70,13 +78,12 @@ public class JankenAuthConfiguration {
   public LogoutSuccessHandler logoutSuccessHandler() {
     return (request, response, authentication) -> {
       if (authentication != null) {
-        entry.remove(authentication.getName()); // ログアウト時に一覧から削除
+        entry.remove(authentication.getName());
       }
-      response.sendRedirect("/"); // トップへ戻る
+      response.sendRedirect("/");
     };
   }
 
-  // ログイン成功時にユーザを「エントリー中ユーザ」へ登録
   @EventListener
   public void onAuthSuccess(AuthenticationSuccessEvent event) {
     Authentication auth = event.getAuthentication();
@@ -85,7 +92,6 @@ public class JankenAuthConfiguration {
     }
   }
 
-  // セッション切断（ブラウザ閉じる等）時も一覧から削除
   @EventListener
   public void onSessionDestroyed(SessionDestroyedEvent event) {
     List<org.springframework.security.core.context.SecurityContext> contexts = event.getSecurityContexts();
