@@ -3,10 +3,19 @@ CREATE TABLE users (
   name VARCHAR(50) NOT NULL
 );
 
+CREATE TABLE matchinfo (
+  id IDENTITY PRIMARY KEY,
+  user1 INT NOT NULL,
+  user2 INT NOT NULL,
+  user1Hand VARCHAR(10),
+  isActive BOOLEAN NOT NULL
+);
+
 CREATE TABLE matches (
   id IDENTITY PRIMARY KEY,
   user1 INT NOT NULL,
   user2 INT NOT NULL,
-  user1Hand VARCHAR(10) NOT NULL,
-  user2Hand VARCHAR(10) NOT NULL
+  user1Hand VARCHAR(10),
+  user2Hand VARCHAR(10),
+  isActive BOOLEAN NOT NULL
 );
