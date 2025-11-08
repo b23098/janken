@@ -7,8 +7,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.session.SessionDestroyedEvent;
 import org.springframework.security.core.userdetails.User;
@@ -39,37 +39,39 @@ public class JankenAuthConfiguration {
 
   @Bean
   public UserDetailsService users(PasswordEncoder encoder) {
-    UserDetails user1 = User.withUsername("user1")
-        .password(encoder.encode("isdev"))
-        .roles("USER")
-        .build();
-    UserDetails user2 = User.withUsername("user2")
-        .password(encoder.encode("isdev"))
-        .roles("USER")
-        .build();
     UserDetails honda = User.withUsername("ほんだ")
         .password(encoder.encode("isdev"))
         .roles("USER")
         .build();
-    return new InMemoryUserDetailsManager(user1, user2, honda);
+
+    UserDetails igaki = User.withUsername("いがき")
+        .password(encoder.encode("isdev"))
+        .roles("USER")
+        .build();
+
+    UserDetails cpu = User.withUsername("CPU")
+        .password(encoder.encode("isdev"))
+        .roles("USER")
+        .build();
+
+    return new InMemoryUserDetailsManager(honda, igaki, cpu);
   }
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http, LogoutSuccessHandler logoutSuccessHandler)
       throws Exception {
+
     http
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/h2-console/**").permitAll() // ★ H2 Consoleにアクセス許可
+            .requestMatchers("/h2-console/**").permitAll()
             .requestMatchers("/janken/**").authenticated()
             .anyRequest().permitAll())
         .formLogin(Customizer.withDefaults())
         .logout(logout -> logout
             .logoutUrl("/logout")
-            .logoutSuccessHandler(logoutSuccessHandler));
-
-    // ★ H2 Console 用の設定（必須）
-    http.csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**")); // CSRF無効化
-    http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin())); // フレーム制限解除
+            .logoutSuccessHandler(logoutSuccessHandler))
+        .csrf(csrf -> csrf.disable())
+        .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
     return http.build();
   }
