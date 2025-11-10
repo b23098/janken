@@ -1,41 +1,39 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<html xmlns:th="http://www.thymeleaf.org">
 
 <head>
   <meta charset="UTF-8">
-  <title>Janken GAME!</title>
+  <title>Janken</title>
 </head>
 
 <body>
-  <a href="/logout">ログアウト</a>
+  <h1>じゃんけんページ</h1>
 
-  <h1>Janken GAME!</h1>
-  <p>Hi <span th:text="${currentUser}"></span></p>
+  <h3 th:text="'Hi ' + ${loginUser}"></h3>
 
-  <h2>エントリー</h2>
+  <h2>エントリー一覧</h2>
   <ul>
-    <li th:each="user : ${users}">
-      <a th:href="@{/match(id=${user.id})}" th:text="${user.name}"></a>
+    <li th:each="u : ${users}">
+      <a th:href="@{/match(id=${u.id})}" th:text="${u.name}"></a>
     </li>
   </ul>
 
-  <h2>試合結果</h2>
-  <table border="1">
-    <tr>
-      <th>ID</th>
-      <th>User1</th>
-      <th>User2</th>
-      <th>User1の手</th>
-      <th>User2の手</th>
-    </tr>
-    <tr th:each="m : ${matches}">
-      <td th:text="${m.id}"></td>
-      <td th:text="${m.user1}"></td>
-      <td th:text="${m.user2}"></td>
-      <td th:text="${m.user1Hand}"></td>
-      <td th:text="${m.user2Hand}"></td>
-    </tr>
-  </table>
+  <hr>
+  <h2>アクティブな試合</h2>
+
+  <div th:if="${#lists.isEmpty(activeMatches)}">
+    <p>現在アクティブな試合はありません。</p>
+  </div>
+
+  <ul th:if="${!#lists.isEmpty(activeMatches)}">
+    <li th:each="m : ${activeMatches}">
+      <span th:text="'id: ' + ${m.id}"></span><br>
+      <span th:text="'user1: ' + ${m.user1}"></span><br>
+      <span th:text="'user2: ' + ${m.user2}"></span><br>
+      <span th:text="'isActive: ' + ${m.isActive}"></span>
+      <hr>
+    </li>
+  </ul>
 </body>
 
 </html>

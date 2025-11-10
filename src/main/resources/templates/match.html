@@ -1,34 +1,20 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html xmlns:th="http://www.thymeleaf.org">
 
 <head>
   <meta charset="UTF-8">
-  <title>Match Page</title>
+  <title>Match</title>
 </head>
 
 <body>
-  <a href="/janken">もどる</a>
-  <hr>
+  <h2 th:text="'対戦: ' + ${loginUser.name} + ' vs ' + ${opponent.name}"></h2>
 
-  <h1>試合ページ</h1>
-  <h2 th:text="${loginUser.name} + ' vs ' + ${opponent.name}"></h2>
+  <p>手を選んでください：</p>
+  <a th:href="@{/fight(id=${opponent.id}, hand='グー')}">グー</a>
+  <a th:href="@{/fight(id=${opponent.id}, hand='チョキ')}">チョキ</a>
+  <a th:href="@{/fight(id=${opponent.id}, hand='パー')}">パー</a>
 
-  <h3>じゃんけんを選択</h3>
-  <p>
-    <a th:href="@{/fight(hand='グー',   id=${opponent.id})}">ぐー</a>
-    <a th:href="@{/fight(hand='チョキ', id=${opponent.id})}">ちょき</a>
-    <a th:href="@{/fight(hand='パー',  id=${opponent.id})}">ぱー</a>
-  </p>
-
-  <div th:if="${result}">
-    <h3>結果</h3>
-    <p>あなたの手：<span th:text="${userHand}"></span></p>
-    <p>CPUの手：<span th:text="${cpuHand}"></span></p>
-    <p><b th:text="${result}"></b></p>
-  </div>
-
-  <hr>
-  <a href="/logout">ログアウト</a>
+  <p><a href="/janken">もどる</a></p>
 </body>
 
 </html>
