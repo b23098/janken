@@ -1,88 +1,135 @@
 package oit.is.z3055.kaizi.janken.controller;
 
-import java.util.ArrayList;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-
-import oit.is.z3055.kaizi.janken.model.User;
-import oit.is.z3055.kaizi.janken.model.UserMapper;
-import oit.is.z3055.kaizi.janken.model.Match;
-import oit.is.z3055.kaizi.janken.model.MatchMapper;
+import org.springframework.web.bind.annotation.ResponseBody;
+import oit.is.z3055.kaizi.janken.model.*;
+import oit.is.z3055.kaizi.janken.service.AsyncKekka;
 
 @Controller
 public class JankenController {
 
-  @Autowired
-  private UserMapper userMapper;
+  private final UserMapper userMapper;
+  private final MatchInfoMapper matchInfoMapper;
+  private final MatchMapper matchMapper;
+  private final AsyncKekka asyncKekka;
 
-  @Autowired
-  private MatchMapper matchMapper;
+  public JankenController(UserMapper userMapper, MatchInfoMapper matchInfoMapper,
+      MatchMapper matchMapper, AsyncKekka asyncKekka) {
+    this.userMapper = userMapper;
+    this.matchInfoMapper = matchInfoMapper;
+    this.matchMapper = matchMapper;
+    this.asyncKekka = asyncKekka;
+  }
 
-  // /janken : ユーザ一覧と試合結果一覧を表示
   @GetMapping("/janken")
-  public String janken(Authentication auth, Model model) {
-    String currentUser = (auth != null) ? auth.getName() : "anonymous";
-    ArrayList<User> users = userMapper.selectAllUsers();
-    ArrayList<Match> matches = matchMapper.selectAllMatches();
-    model.addAttribute("currentUser", currentUser);
-    model.addAttribute("users", users);
-    model.addAttribute("matches", matches);
+  public String showJanken(Model model, Authentication auth) {
+    String loginUserName = auth.getName();
+    model.addAttribute("loginUser", loginUserName);
+    model.addAttribute("users", userMapper.selectAllUsers());
+    List<MatchInfo> activeMatches = matchInfoMapper.selectActiveMatchInfo();
+    model.addAttribute("activeMatches", activeMatches);
     return "janken";
   }
 
-  // /match?id=◯ と /janken/match?id=◯ の両方で受ける
-  @GetMapping({ "/match", "/janken/match" })
-  public String showMatch(@RequestParam int id, Authentication auth, Model model) {
-    if (auth == null)
-      return "redirect:/login";
-    User loginUser = userMapper.selectByName(auth.getName());
+  @GetMapping("/match")
+  public String showMatch(@RequestParam int id, Model model, Authentication auth) {
+    String loginUserName = auth.getName();
+    User loginUser = userMapper.selectByName(loginUserName);
     User opponent = userMapper.selectById(id);
-    if (loginUser == null || opponent == null)
-      return "redirect:/janken";
     model.addAttribute("loginUser", loginUser);
     model.addAttribute("opponent", opponent);
     return "match";
   }
 
-  // /fight?hand=◯&id=◯ と /janken/fight?... の両方で受ける
-  @GetMapping({ "/fight", "/janken/fight" })
-  public String fight(@RequestParam String hand, @RequestParam int id, Authentication auth, Model model) {
-    if (auth == null)
-      return "redirect:/login";
-    User loginUser = userMapper.selectByName(auth.getName());
+  @GetMapping("/fight")
+  public String fight(@RequestParam int id, @RequestParam String hand, Authentication auth, Model model) {
+    String loginUserName = auth.getName();
+    User loginUser = userMapper.selectByName(loginUserName);
     User opponent = userMapper.selectById(id);
-    if (loginUser == null || opponent == null)
-      return "redirect:/janken";
-
-    String cpuHand = "チョキ"; // 固定
-    String result;
-    if (hand.equals(cpuHand)) {
-      result = "あいこです！";
-    } else if ((hand.equals("グー") && cpuHand.equals("チョキ"))
-        || (hand.equals("チョキ") && cpuHand.equals("パー"))
-        || (hand.equals("パー") && cpuHand.equals("グー"))) {
-      result = "あなたの勝ち！";
+    List<MatchInfo> existing = matchInfoMapper.selectActiveMatchInfoByUser(opponent.getId());
+    if (existing.isEmpty()) {
+      MatchInfo info = new MatchInfo();
+      info.setUser1(loginUser.getId());
+      info.setUser2(opponent.getId());
+      info.setUser1Hand(hand);
+      info.setIsActive(true);
+      matchInfoMapper.insertMatchInfo(info);
     } else {
-      result = "あなたの負け...";
+      MatchInfo info = existing.get(0);
+      Match match = new Match();
+      match.setUser1(info.getUser1());
+      match.setUser2(info.getUser2());
+      match.setUser1Hand(info.getUser1Hand());
+      match.setUser2Hand(hand);
+      match.setIsActive(true);
+      matchMapper.insertMatch(match);
+      matchInfoMapper.deactivateMatchInfo(info.getId());
     }
+    model.addAttribute("loginUser", loginUserName);
+    asyncKekka.asyncWaitForResult();
+    return "wait";
+  }
 
-    Match m = new Match();
-    m.setUser1(loginUser.getId());
-    m.setUser2(opponent.getId());
-    m.setUser1Hand(hand);
-    m.setUser2Hand(cpuHand);
-    matchMapper.insertMatch(m);
+  @GetMapping("/api/result")
+  @ResponseBody
+  public Map<String, Object> apiResult(Authentication auth) {
+    Map<String, Object> res = new HashMap<>();
+    String loginUserName = auth.getName();
+    User me = userMapper.selectByName(loginUserName);
+    Match m = matchMapper.selectActiveMatchByUserId(me.getId());
+    if (m == null) {
+      res.put("active", true);
+      return res;
+    }
+    String u1Name = userMapper.selectById(m.getUser1()).getName();
+    String u2Name = userMapper.selectById(m.getUser2()).getName();
+    String h1 = normalizeHand(m.getUser1Hand());
+    String h2 = normalizeHand(m.getUser2Hand());
+    String judge = judge(h1, h2, loginUserName, u1Name, u2Name);
+    String resultText = String.format("%s(%s) vs %s(%s) → %s", u1Name, h1, u2Name, h2, judge);
+    res.put("active", false);
+    res.put("result", resultText);
+    matchMapper.deactivateMatch(m.getId());
+    return res;
+  }
 
-    model.addAttribute("loginUser", loginUser);
-    model.addAttribute("opponent", opponent);
-    model.addAttribute("userHand", hand);
-    model.addAttribute("cpuHand", cpuHand);
-    model.addAttribute("result", result);
-    return "match";
+  private String normalizeHand(String s) {
+    if (s == null)
+      return "";
+    return switch (s) {
+      case "グー", "Gu", "gu" -> "グー";
+      case "チョキ", "Choki", "choki" -> "チョキ";
+      case "パー", "Pa", "pa" -> "パー";
+      default -> s;
+    };
+  }
+
+  private String judge(String h1, String h2, String loginUserName, String u1Name, String u2Name) {
+    if (h1.equals(h2)) {
+      return "あいこ";
+    }
+    boolean user1Wins = (h1.equals("グー") && h2.equals("チョキ"))
+        || (h1.equals("チョキ") && h2.equals("パー"))
+        || (h1.equals("パー") && h2.equals("グー"));
+    if (user1Wins) {
+      if (loginUserName.equals(u1Name)) {
+        return "あなたの勝ち";
+      } else {
+        return "あなたの負け";
+      }
+    } else {
+      if (loginUserName.equals(u2Name)) {
+        return "あなたの勝ち";
+      } else {
+        return "あなたの負け";
+      }
+    }
   }
 }
